@@ -5,7 +5,7 @@ Author:               Daumantas Kavolis <dkavolis>
 Date:                 05-Apr-2019
 Filename:             package.py
 Last Modified By:     Daumantas Kavolis
-Last Modified Time:   13-Apr-2019
+Last Modified Time:   25-Apr-2019
 ------------------
 Copyright (c) 2019 Daumantas Kavolis
 
@@ -141,8 +141,8 @@ def build_file_list(config):
     for pattern in package.get("exclude", []):
         zipfiles.exclude(pattern)
 
-    for src, dst in package.get("map", {}).items():
-        zipfiles.map(src, dst)
+    for file_map in package.get("map", []):
+        zipfiles.map(file_map["source"], file_map["destination"])
 
     def process_dependency(name, data):
         src = common.resolve_path(name, config)
@@ -154,14 +154,15 @@ def build_file_list(config):
         for pattern in data.get("exclude", []):
             zipfiles.exclude(os.path.join(src, pattern))
 
-        for _src, _dst in data.get("map", {}).items():
-            _src = common.resolve_path(_src, config)
+        for file_map in data.get("map", []):
+            _src = common.resolve_path(file_map["source"], config)
             if not os.path.isabs(_src):
                 _src = os.path.join(src, _src)
-            zipfiles.map(_src, _dst)
+            zipfiles.map(_src, file_map["destination"])
 
-    for key, value in package.get("dependencies", {}).items():
-        process_dependency(key, value)
+    for dependency in package.get("dependencies", []):
+        key = dependency["path"]
+        process_dependency(key, dependency)
 
     return zipfiles
 

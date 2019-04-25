@@ -13,7 +13,7 @@
         "VersionMajor": 0,
         "VersionMinor": 15,
         "VersionBuild": 10,
-        "VersionRevision": 0,
+        "VersionRevision": 1,
         "VersionName": "Lundgren",
         "Year": 2019,
         "NumericalVersion": "$(VersionMajor).$(VersionMinor).$(VersionBuild).$(VersionRevision)",
@@ -27,52 +27,126 @@
     "post_build": {
         "pdb2mdb": "$(SolutionDir)../KSP Assemblies/pdb2mdb.exe",
         "clean": [],
-        "install": {
-            "$(TargetDir)$(TargetName).*": "$(PluginDir)"
-        },
+        "install": [
+            {
+                "source": "$(TargetDir)$(TargetName).*",
+                "destination": "$(PluginDir)"
+            }
+        ],
         "[FerramAerospaceResearch]": {
             "clean": [
                 "$(GameDir)"
             ],
-            "install": {
-                "$(TargetDir)$(TargetName).*": "$(PluginDir)",
-                "GameData/$(ModName)": "$(GameDir)"
-            }
+            "install": [
+                {
+                    "source": "$(TargetDir)$(TargetName).*",
+                    "destination": "$(PluginDir)"
+                },
+                {
+                    "source": "GameData/$(ModName)",
+                    "destination": "$(GameDir)"
+                }
+            ]
         }
     },
     "replace": {
-        "regex": {
-            "**/*.cs": {
-                "[Cc]opyright (\\d+)": "$(Year)",
-                "v($(VersionRegex))": "$(VersionString)"
+        "regex": [
+            {
+                "pattern": "**/*.cs",
+                "substitutions": [
+                    {
+                        "search": "[Cc]opyright (\\d+)",
+                        "replace": "$(Year)"
+                    },
+                    {
+                        "search": "v($(VersionRegex))",
+                        "replace": "$(VersionString)"
+                    }
+                ]
             },
-            "$(ModName)/FARUtils/FARVersion.cs": {
-                "Major = (\\d+);": "$(VersionMajor)",
-                "Minor = (\\d+);": "$(VersionMinor)",
-                "Build = (\\d+);": "$(VersionBuild)",
-                "Revision = (\\d+);": "$(VersionRevision)",
-                "Name = \"(\\w+)\";": "$(VersionName)"
+            {
+                "pattern": "$(ModName)/FARUtils/FARVersion.cs",
+                "substitutions": [
+                    {
+                        "search": "Major = (\\d+);",
+                        "replace": "$(VersionMajor)"
+                    },
+                    {
+                        "search": "Minor = (\\d+);",
+                        "replace": "$(VersionMinor)"
+                    },
+                    {
+                        "search": "Build = (\\d+);",
+                        "replace": "$(VersionBuild)"
+                    },
+                    {
+                        "search": "Revision = (\\d+);",
+                        "replace": "$(VersionRevision)"
+                    },
+                    {
+                        "search": "Name = \"(\\w+)\";",
+                        "replace": "$(VersionName)"
+                    }
+                ]
             },
-            "README.md": {
-                "v($(VersionRegex))": "$(VersionString)",
-                "(-+master branch-+)": "$(VersionMajor).$(VersionMinor).$(VersionBuild).$(VersionRevision)V \"$(VersionName)\"------------------------------------"
+            {
+                "pattern": "README.md",
+                "substitutions": [
+                    {
+                        "search": "v($(VersionRegex))",
+                        "replace": "$(VersionString)"
+                    },
+                    {
+                        "search": "(-+master branch-+)",
+                        "replace": "$(VersionMajor).$(VersionMinor).$(VersionBuild).$(VersionRevision)V \"$(VersionName)\"------------------------------------"
+                    }
+                ]
             },
-            "$(ModName)/Properties/AssemblyInfo.cs": {
-                "Copyright .* (\\d+)": "$(Year)",
-                "Assembly\\w*Version\\(\"([\\.\\d]+)\"\\)": "$(NumericalVersion)",
-                "KSPAssembly\\(\"\\w+\", (\\d+, \\d+)\\)": "$(VersionMajor), $(VersionMinor)"
+            {
+                "pattern": "$(ModName)/Properties/AssemblyInfo.cs",
+                "substitutions": [
+                    {
+                        "search": "Copyright .* (\\d+)",
+                        "replace": "$(Year)"
+                    },
+                    {
+                        "search": "Assembly\\w*Version\\(\"([\\.\\d]+)\"\\)",
+                        "replace": "$(NumericalVersion)"
+                    },
+                    {
+                        "search": "KSPAssembly\\(\"\\w+\", (\\d+, \\d+)\\)",
+                        "replace": "$(VersionMajor), $(VersionMinor)"
+                    }
+                ]
             },
-            "$(ModName)/CompatibilityChecker.cs": {
-                "KSP_MAJOR_MAX\\s*=\\s*(\\d+)": "$(KSPMajorMax)",
-                "KSP_MAJOR_MIN\\s*=\\s*(\\d+)": "$(KSPMajorMin)",
-                "KSP_MINOR_MAX\\s*=\\s*(\\d+)": "$(KSPMinorMax)",
-                "KSP_MINOR_MIN\\s*=\\s*(\\d+)": "$(KSPMinorMin)"
+            {
+                "pattern": "$(ModName)/CompatibilityChecker.cs",
+                "substitutions": [
+                    {
+                        "search": "KSP_MAJOR_MAX\\s*=\\s*(\\d+)",
+                        "replace": "$(KSPMajorMax)"
+                    },
+                    {
+                        "search": "KSP_MAJOR_MIN\\s*=\\s*(\\d+)",
+                        "replace": "$(KSPMajorMin)"
+                    },
+                    {
+                        "search": "KSP_MINOR_MAX\\s*=\\s*(\\d+)",
+                        "replace": "$(KSPMinorMax)"
+                    },
+                    {
+                        "search": "KSP_MINOR_MIN\\s*=\\s*(\\d+)",
+                        "replace": "$(KSPMinorMin)"
+                    }
+                ]
             }
-        },
-        "template_files":
-        {
-            "$(ModDir)FAR.version.in": "$(ModDir)FAR.version"
-        }
+        ],
+        "template_files": [
+            {
+                "source": "$(ModDir)FAR.version.in",
+                "destination": "$(ModDir)FAR.version"
+            }
+        ]
     },
     "package": {
         "compression": "deflated",
@@ -88,28 +162,39 @@
             "$(ModDirRelative)**/*.in",
             "$(ModDirRelative)**/*.dll.*"
         ],
-        "map": {
-            "LICENSE": "LICENSE_FAR"
-        },
-        "dependencies": {
-            "$(KSPGameData)ModularFlightIntegrator": {
+        "map": [
+            {
+                "source": "LICENSE",
+                "destination": "LICENSE_FAR"
+            }
+        ],
+        "dependencies": [
+            {
+                "path": "$(KSPGameData)ModularFlightIntegrator",
                 "destination": "GameData/ModularFlightIntegrator/",
                 "include": [
                     "*"
                 ],
-                "map": {
-                    "LICENSE.txt": "LICENSE_ModularFlightIntegrator"
-                }
+                "map": [
+                    {
+                        "source": "LICENSE.txt",
+                        "destination": "LICENSE_ModularFlightIntegrator"
+                    }
+                ]
             },
-            "$(KSPGameData)": {
+            {
+                "path": "$(KSPGameData)",
                 "destination": "GameData/",
                 "include": [
                     "ModuleManager*.dll"
                 ],
-                "map": {
-                    "$(SolutionDir)releases/MM_LICENSE": "LICENSE_ModuleManager"
-                }
+                "map": [
+                    {
+                        "source": "$(SolutionDir)releases/MM_LICENSE",
+                        "destination": "LICENSE_ModuleManager"
+                    }
+                ]
             }
-        }
+        ]
     }
 }

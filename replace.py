@@ -5,7 +5,7 @@ Author:               Daumantas Kavolis <dkavolis>
 Date:                 05-Apr-2019
 Filename:             replace.py
 Last Modified By:     Daumantas Kavolis
-Last Modified Time:   13-Apr-2019
+Last Modified Time:   25-Apr-2019
 ------------------
 Copyright (c) 2019 Daumantas Kavolis
 
@@ -42,15 +42,15 @@ def build_parser(parser):
 
 
 def replace(config):
-    for glob_pattern, subs in config.get("replace", {}).get("regex", {}).items():
-        files = common.glob(common.resolve_path(glob_pattern, config))
+    for patterns in config.get("replace", {}).get("regex", []):
+        files = common.glob(common.resolve_path(patterns["pattern"], config))
 
         for filename in files:
-            replace_in_file(filename, subs, config)
+            replace_in_file(filename, patterns["substitutions"], config)
 
-    for src, dst in config.get("replace", {}).get("template_files", {}).items():
-        src = common.resolve_path(src, config)
-        dst = common.resolve_path(dst, config)
+    for files in config.get("replace", {}).get("template_files", []):
+        src = common.resolve_path(files["source"], config)
+        dst = common.resolve_path(files["destination"], config)
 
         replace_in_file_all(src, dst, config)
 
@@ -70,9 +70,9 @@ def replace_in_file(filename, replacements, config):
     print(f"Updating {filename!r}")
     with open(filename, "r") as file:
         contents = file.read()
-    for pattern, replacement in replacements.items():
-        pattern = common.resolve(pattern, config)
-        replacement = common.resolve(replacement, config)
+    for replacement in replacements:
+        pattern = common.resolve(replacement["search"], config)
+        replacement = common.resolve(replacement["replace"], config)
 
         def replace(matchobj):
             if (len(matchobj.groups())) > 0:

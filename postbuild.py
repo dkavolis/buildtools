@@ -5,7 +5,7 @@ Author:               Daumantas Kavolis <dkavolis>
 Date:                 05-Apr-2019
 Filename:             postbuild.py
 Last Modified By:     Daumantas Kavolis
-Last Modified Time:   13-Apr-2019
+Last Modified Time:   25-Apr-2019
 ------------------
 Copyright (c) 2019 Daumantas Kavolis
 
@@ -130,9 +130,9 @@ def clean(paths, config):
 
 
 def install(mapping, config):
-    for src, dst in mapping.items():
-        src = common.resolve_path(src, config)
-        dst = common.resolve_path(dst, config)
+    for item in mapping:
+        src = common.resolve_path(item["source"], config)
+        dst = common.resolve_path(item["destination"], config)
 
         src = common.glob(src)
 
