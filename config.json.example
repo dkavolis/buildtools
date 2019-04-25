@@ -55,12 +55,12 @@
                 "pattern": "**/*.cs",
                 "substitutions": [
                     {
-                        "search": "[Cc]opyright (\\d+)",
-                        "replace": "$(Year)"
+                        "search": "([Cc]opyright )\\d+",
+                        "replace": "\\g<1>$(Year)"
                     },
                     {
-                        "search": "v($(VersionRegex))",
-                        "replace": "$(VersionString)"
+                        "search": "v$(VersionRegex)",
+                        "replace": "v$(VersionString)"
                     }
                 ]
             },
@@ -68,24 +68,24 @@
                 "pattern": "$(ModName)/FARUtils/FARVersion.cs",
                 "substitutions": [
                     {
-                        "search": "Major = (\\d+);",
-                        "replace": "$(VersionMajor)"
+                        "search": "Major = \\d+;",
+                        "replace": "Major = $(VersionMajor);"
                     },
                     {
-                        "search": "Minor = (\\d+);",
-                        "replace": "$(VersionMinor)"
+                        "search": "Minor = \\d+;",
+                        "replace": "Minor = $(VersionMinor);"
                     },
                     {
-                        "search": "Build = (\\d+);",
-                        "replace": "$(VersionBuild)"
+                        "search": "Build = \\d+;",
+                        "replace": "Build = $(VersionBuild);"
                     },
                     {
-                        "search": "Revision = (\\d+);",
-                        "replace": "$(VersionRevision)"
+                        "search": "Revision = \\d+;",
+                        "replace": "Revision = $(VersionRevision);"
                     },
                     {
-                        "search": "Name = \"(\\w+)\";",
-                        "replace": "$(VersionName)"
+                        "search": "Name = \"\\w+\";",
+                        "replace": "Name = \"$(VersionName)\";"
                     }
                 ]
             },
@@ -93,11 +93,11 @@
                 "pattern": "README.md",
                 "substitutions": [
                     {
-                        "search": "v($(VersionRegex))",
-                        "replace": "$(VersionString)"
+                        "search": "v$(VersionRegex)",
+                        "replace": "v$(VersionString)"
                     },
                     {
-                        "search": "(-+master branch-+)",
+                        "search": "-+master branch-+",
                         "replace": "$(VersionMajor).$(VersionMinor).$(VersionBuild).$(VersionRevision)V \"$(VersionName)\"------------------------------------"
                     }
                 ]
@@ -106,16 +106,16 @@
                 "pattern": "$(ModName)/Properties/AssemblyInfo.cs",
                 "substitutions": [
                     {
-                        "search": "Copyright .* (\\d+)",
-                        "replace": "$(Year)"
+                        "search": "(Copyright .* )\\d+",
+                        "replace": "\\g<1>$(Year)"
                     },
                     {
-                        "search": "Assembly\\w*Version\\(\"([\\.\\d]+)\"\\)",
-                        "replace": "$(NumericalVersion)"
+                        "search": "(Assembly\\w*Version\\(\")[\\.\\d]+(\"\\))",
+                        "replace": "\\g<1>$(NumericalVersion)\\g<2>"
                     },
                     {
-                        "search": "KSPAssembly\\(\"\\w+\", (\\d+, \\d+)\\)",
-                        "replace": "$(VersionMajor), $(VersionMinor)"
+                        "search": "(KSPAssembly\\(\"\\w+\", )\\d+, \\d+(\\))",
+                        "replace": "\\g<1>$(VersionMajor), $(VersionMinor)\\g<2>"
                     }
                 ]
             },
@@ -123,20 +123,20 @@
                 "pattern": "$(ModName)/CompatibilityChecker.cs",
                 "substitutions": [
                     {
-                        "search": "KSP_MAJOR_MAX\\s*=\\s*(\\d+)",
-                        "replace": "$(KSPMajorMax)"
+                        "search": "(KSP_MAJOR_MAX\\s*=\\s*)\\d+",
+                        "replace": "\\g<1>$(KSPMajorMax)"
                     },
                     {
-                        "search": "KSP_MAJOR_MIN\\s*=\\s*(\\d+)",
-                        "replace": "$(KSPMajorMin)"
+                        "search": "(KSP_MAJOR_MIN\\s*=\\s*)\\d+",
+                        "replace": "\\g<1>$(KSPMajorMin)"
                     },
                     {
-                        "search": "KSP_MINOR_MAX\\s*=\\s*(\\d+)",
-                        "replace": "$(KSPMinorMax)"
+                        "search": "(KSP_MINOR_MAX\\s*=\\s*)\\d+",
+                        "replace": "\\g<1>$(KSPMinorMax)"
                     },
                     {
-                        "search": "KSP_MINOR_MIN\\s*=\\s*(\\d+)",
-                        "replace": "$(KSPMinorMin)"
+                        "search": "(KSP_MINOR_MIN\\s*=\\s*)\\d+",
+                        "replace": "\\g<1>$(KSPMinorMin)"
                     }
                 ]
             }

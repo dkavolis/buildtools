@@ -73,19 +73,7 @@ def replace_in_file(filename, replacements, config):
     for replacement in replacements:
         pattern = common.resolve(replacement["search"], config)
         replacement = common.resolve(replacement["replace"], config)
-
-        def replace(matchobj):
-            if (len(matchobj.groups())) > 0:
-                string = matchobj[0]
-                start_, end_ = matchobj.start(), matchobj.end()
-                start, end = matchobj.start(1), matchobj.end(1)
-                new = string[: start - start_] + replacement
-                if end != end_:
-                    new = new + string[end - end_ :]
-                return sub_groups(new, (matchobj[0],) + matchobj.groups())
-            return sub_groups(replacement, (matchobj[0],) + matchobj.groups())
-
-        contents = re.sub(pattern, replace, contents)
+        contents = re.sub(pattern, replacement, contents)
     with open(filename, "w") as file:
         file.write(contents)
 
