@@ -5,7 +5,7 @@ Author:               Daumantas Kavolis <dkavolis>
 Date:                 05-Apr-2019
 Filename:             common.py
 Last Modified By:     Daumantas Kavolis
-Last Modified Time:   13-Apr-2019
+Last Modified Time:   24-Nov-2019
 ------------------
 Copyright (c) 2019 Daumantas Kavolis
 
@@ -54,7 +54,7 @@ def load_config(filename: str) -> Dict[str, Any]:
         data["build_props"] = os.path.join(root, data["build_props"])
 
     data.setdefault("variables", {}).update(
-        load_variables(data.get("build_props", None))
+        load_variables(root, data.get("build_props", None))
     )
 
     for name, value in data["variables"].items():
@@ -102,8 +102,8 @@ def load_build_props(filename: str) -> Dict[str, str]:
     return data
 
 
-def load_variables(filename: str = None) -> Dict[str, str]:
-    data = get_solution_vars()
+def load_variables(root: str = None, filename: str = None) -> Dict[str, str]:
+    data = get_solution_vars(root)
     if filename is not None:
         data.update(load_build_props(filename))
     for key, value in data.items():
