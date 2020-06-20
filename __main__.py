@@ -26,7 +26,7 @@ Copyright (c) 2019 Daumantas Kavolis
 
 
 import argparse
-from buildtools import common, package, postbuild, replace
+from buildtools import common, package, postbuild, replace, burst_compile
 
 
 def main():
@@ -44,6 +44,9 @@ def main():
     post = subparsers.add_parser(
         "postbuild", description="Post build utility", parents=[parser]
     )
+    burst_compiler = subparsers.add_parser(
+        "burst_compile", description="Burst compiler utility", parents=[parser]
+    )
 
     # args.command always contains None so add defaults
     replace.build_parser(replacer)
@@ -54,6 +57,9 @@ def main():
 
     postbuild.build_parser(post)
     post.set_defaults(run=postbuild.run)
+
+    burst_compile.build_parser(burst_compiler)
+    burst_compiler.set_defaults(run=burst_compile.run)
 
     parser.add_argument(
         "-h",

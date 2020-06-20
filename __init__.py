@@ -25,4 +25,4 @@ Copyright (c) 2019 Daumantas Kavolis
 """
 
 
-from buildtools import common, postbuild, replace, package
+from buildtools import common, postbuild, replace, package, burst_compile

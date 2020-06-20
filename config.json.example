@@ -7,32 +7,54 @@
         "ModDir": "$(SolutionDir)$(ModDirRelative)",
         "PluginDir": "$(ModDir)Plugins/",
         "AssetDir": "$(ModDir)Assets/",
-        "KSP_DIR_INSTALL": "C:/Zaidimai/KSP 1.7.0/",
+        "KSP_DIR_INSTALL": "C:/Zaidimai/KSP 1.9/",
         "KSPGameData": "$(KSP_DIR_INSTALL)GameData/",
         "GameDir": "$(KSPGameData)$(ModName)/",
         "VersionMajor": 0,
         "VersionMinor": 15,
-        "VersionBuild": 10,
-        "VersionRevision": 1,
-        "VersionName": "Lundgren",
-        "Year": 2019,
+        "VersionBuild": 11,
+        "VersionRevision": 4,
+        "VersionName": "Mach",
+        "Year": 2020,
         "NumericalVersion": "$(VersionMajor).$(VersionMinor).$(VersionBuild).$(VersionRevision)",
         "VersionString": "$(NumericalVersion) \"$(VersionName)\"",
         "VersionRegex": "\\d+\\.\\d+\\.\\d+(?:\\.\\d+)?\\s*\"\\w+\"",
         "KSPMajorMin": 1,
         "KSPMajorMax": 1,
-        "KSPMinorMin": 4,
-        "KSPMinorMax": 7
+        "KSPMinorMin": 8,
+        "KSPMinorMax": 9,
+        "UnityDir": "$(SolutionDir)Unity/$(ModName)/",
+        "AssetBundleDir": "$(UnityDir)AssetBundles/",
+        "UnityAssetsDir": "$(UnityDir)Assets/",
+        "UnityPluginsDir": "$(UnityAssetsDir)Plugins/",
+        "UnityEditorDir": "C:/Program Files/Unity/Hub/Editor/2019.2.2f1/",
+        "BurstOuputDir": "$(SolutionDir)Unity/Burst/",
+        "BurstOuputName": "lib_burst_generated"
     },
     "post_build": {
-        "pdb2mdb": "$(SolutionDir)../KSP Assemblies/pdb2mdb.exe",
         "clean": [],
         "install": [
             {
                 "source": "$(TargetDir)$(TargetName).*",
                 "destination": "$(PluginDir)"
+            },
+            {
+                "source": "$(AssetBundleDir)*.far",
+                "destination": "$(AssetDir)"
             }
         ],
+        "[FerramAerospaceResearch.Base]": {
+            "install": [
+                {
+                    "source": "$(TargetDir)$(TargetName).*",
+                    "destination": "$(PluginDir)"
+                },
+                {
+                    "source": "$(TargetDir)$(TargetName).*",
+                    "destination": "$(UnityPluginsDir)"
+                }
+            ]
+        },
         "[FerramAerospaceResearch]": {
             "clean": [
                 "$(GameDir)"
@@ -41,6 +63,10 @@
                 {
                     "source": "$(TargetDir)$(TargetName).*",
                     "destination": "$(PluginDir)"
+                },
+                {
+                    "source": "$(AssetBundleDir)*.far",
+                    "destination": "$(AssetDir)"
                 },
                 {
                     "source": "GameData/$(ModName)",
@@ -52,7 +78,7 @@
     "replace": {
         "regex": [
             {
-                "pattern": "**/*.cs",
+                "pattern": "ferram*/**/*.cs",
                 "substitutions": [
                     {
                         "search": "([Cc]opyright )\\d+",
@@ -65,7 +91,7 @@
                 ]
             },
             {
-                "pattern": "$(ModName)/FARUtils/FARVersion.cs",
+                "pattern": "$(ModName).Base/Version.cs",
                 "substitutions": [
                     {
                         "search": "Major = \\d+;",
@@ -103,7 +129,7 @@
                 ]
             },
             {
-                "pattern": "$(ModName)/Properties/AssemblyInfo.cs",
+                "pattern": "$(ModName)*/Properties/AssemblyInfo.cs",
                 "substitutions": [
                     {
                         "search": "(Copyright .* )\\d+",
@@ -116,27 +142,6 @@
                     {
                         "search": "(KSPAssembly\\(\"\\w+\", )\\d+, \\d+(\\))",
                         "replace": "\\g<1>$(VersionMajor), $(VersionMinor)\\g<2>"
-                    }
-                ]
-            },
-            {
-                "pattern": "$(ModName)/CompatibilityChecker.cs",
-                "substitutions": [
-                    {
-                        "search": "(KSP_MAJOR_MAX\\s*=\\s*)\\d+",
-                        "replace": "\\g<1>$(KSPMajorMax)"
-                    },
-                    {
-                        "search": "(KSP_MAJOR_MIN\\s*=\\s*)\\d+",
-                        "replace": "\\g<1>$(KSPMajorMin)"
-                    },
-                    {
-                        "search": "(KSP_MINOR_MAX\\s*=\\s*)\\d+",
-                        "replace": "\\g<1>$(KSPMinorMax)"
-                    },
-                    {
-                        "search": "(KSP_MINOR_MIN\\s*=\\s*)\\d+",
-                        "replace": "\\g<1>$(KSPMinorMin)"
                     }
                 ]
             }
@@ -194,6 +199,54 @@
                         "destination": "LICENSE_ModuleManager"
                     }
                 ]
+            }
+        ]
+    },
+    "burst_compile": {
+        "bcl": "$(UnityDir)Library/PackageCache/com.unity.burst@1.3.1/.Runtime/bcl.exe",
+        "debug": true,
+        "targets": [
+            {
+                "platform": "Windows",
+                "include": null,
+                "safety_checks": false,
+                "fastmath": true,
+                "targets": [
+                    "X64_SSE2",
+                    "X64_SSE4",
+                    "AVX",
+                    "AVX2"
+                ],
+                "enable_guard": false,
+                "float_precision": "Standard",
+                "float_mode": "Default",
+                "debug": "None",
+                "debugMode": false,
+                "output": "$(BurstOuputDir)windows/$(BurstOuputName)",
+                "verbose": false,
+                "log_timings": true,
+                "key_folder": "$(UnityEditorDir)Editor/Data/PlaybackEngines/WindowsStandaloneSupport",
+                "root_assemblies": [
+                    "$(PluginDir)FerramAerospaceResearch.Base.dll",
+                    "$(PluginDir)Unity.Collections.dll",
+                    "$(PluginDir)Unity.Mathematics.dll",
+                    "$(PluginDir)Unity.Burst.dll",
+                    "$(KSP_DIR_INSTALL)KSP_x64_Data/Managed/UnityEngine.UI.dll",
+                    "$(KSP_DIR_INSTALL)KSP_x64_Data/Managed/Unity.Timeline.dll"
+                ],
+                "include_root_assembly_references": true
+            },
+            {
+                "platform": "Linux",
+                "include": "Windows",
+                "output": "$(BurstOuputDir)linux/$(BurstOuputName)",
+                "key_folder": "$(UnityEditorDir)Editor/Data/PlaybackEngines/LinuxStandaloneSupport"
+            },
+            {
+                "platform": "macOS",
+                "include": "Windows",
+                "output": "$(BurstOuputDir)macos/$(BurstOuputName)",
+                "key_folder": "$(UnityEditorDir)Editor/Data/PlaybackEngines/MacStandaloneSupport"
             }
         ]
     }
