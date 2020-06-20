@@ -27,7 +27,6 @@
         "AssetBundleDir": "$(UnityDir)AssetBundles/",
         "UnityAssetsDir": "$(UnityDir)Assets/",
         "UnityPluginsDir": "$(UnityAssetsDir)Plugins/",
-        "UnityEditorDir": "C:/Program Files/Unity/Hub/Editor/2019.2.2f1/",
         "BurstOuputDir": "$(SolutionDir)Unity/Burst/",
         "BurstOuputName": "lib_burst_generated"
     },
@@ -210,7 +209,7 @@
                 "platform": "Windows",
                 "include": null,
                 "safety_checks": false,
-                "fastmath": true,
+                "fastmath": false,
                 "targets": [
                     "X64_SSE2",
                     "X64_SSE4",
@@ -225,28 +224,25 @@
                 "output": "$(BurstOuputDir)windows/$(BurstOuputName)",
                 "verbose": false,
                 "log_timings": true,
-                "key_folder": "$(UnityEditorDir)Editor/Data/PlaybackEngines/WindowsStandaloneSupport",
                 "root_assemblies": [
-                    "$(PluginDir)FerramAerospaceResearch.Base.dll",
-                    "$(PluginDir)Unity.Collections.dll",
-                    "$(PluginDir)Unity.Mathematics.dll",
-                    "$(PluginDir)Unity.Burst.dll",
-                    "$(KSP_DIR_INSTALL)KSP_x64_Data/Managed/UnityEngine.UI.dll",
-                    "$(KSP_DIR_INSTALL)KSP_x64_Data/Managed/Unity.Timeline.dll"
+                    "$(PluginDir)*.dll",
+                    "$(KSP_DIR_INSTALL)KSP_x64_Data/Managed/*.dll"
+                ],
+                "assembly_folders": [
+                    "$(KSP_DIR_INSTALL)KSP_x64_Data/Managed",
+                    "$(PluginDir)"
                 ],
                 "include_root_assembly_references": true
             },
             {
                 "platform": "Linux",
                 "include": "Windows",
-                "output": "$(BurstOuputDir)linux/$(BurstOuputName)",
-                "key_folder": "$(UnityEditorDir)Editor/Data/PlaybackEngines/LinuxStandaloneSupport"
+                "output": "$(BurstOuputDir)linux/$(BurstOuputName)"
             },
             {
                 "platform": "macOS",
                 "include": "Windows",
-                "output": "$(BurstOuputDir)macos/$(BurstOuputName)",
-                "key_folder": "$(UnityEditorDir)Editor/Data/PlaybackEngines/MacStandaloneSupport"
+                "output": "$(BurstOuputDir)macos/$(BurstOuputName)"
             }
         ]
     }

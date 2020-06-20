@@ -15,6 +15,7 @@ import os
 import subprocess
 import sys
 from buildtools import common
+import glob
 
 logger = logging.getLogger(__name__)
 
@@ -92,6 +93,16 @@ def add_value_option(args, target, name, config, is_path=False):
     args.append(f"--{name.replace('_', '-')}={option}")
 
 
+def add_path_list_option(args, target, name, option_name, config):
+    for path in target.get(name, []):
+        path = common.resolve_path(path, config)
+        if "*" in path:
+            for p in glob.glob(path, recursive=True):
+                args.append(f"--{option_name}={p}")
+        else:
+            args.append(f"--{option_name}={path}")
+
+
 def burst_compile(bcl, target, config, debug=False):
     args = [bcl]
 
@@ -110,10 +121,10 @@ def burst_compile(bcl, target, config, debug=False):
     add_value_option(args, target, "include_root_assembly_references", config)
 
     for t in target.get("targets", []):
-        args.append(f"--target={common.resolve_path(t, config)}")
+        args.append(f"--target={common.resolve(t, config)}")
 
-    for asm in target.get("root_assemblies", []):
-        args.append(f"--root-assembly={common.resolve_path(asm, config)}")
+    add_path_list_option(args, target, "root_assemblies", "root-assembly", config)
+    add_path_list_option(args, target, "assembly_folders", "assembly-folder", config)
 
     logger.debug("Running burst with args: %s", args)
 
