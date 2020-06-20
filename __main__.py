@@ -32,9 +32,9 @@ from buildtools import common, package, postbuild, replace
 def main():
     parser = argparse.ArgumentParser("C# build helpers", add_help=False)
 
+    common.add_config_option(parser)
     subparsers = parser.add_subparsers(description="Available helpers", dest="command")
 
-    common.add_config_option(parser)
     replacer = subparsers.add_parser(
         "replace", description="Regex replacement utility", parents=[parser]
     )
@@ -54,6 +54,14 @@ def main():
 
     postbuild.build_parser(post)
     post.set_defaults(run=postbuild.run)
+
+    parser.add_argument(
+        "-h",
+        "--help",
+        action="help",
+        help="Display this help and exit",
+        default=argparse.SUPPRESS,
+    )
 
     args = parser.parse_args()
 
