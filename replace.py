@@ -57,24 +57,24 @@ def replace(config):
 
 def replace_in_file_all(src, dst, config):
     print(f"Updating {src!r} -> {dst!r}")
-    with open(src, "r") as file:
+    with open(src, "r", newline="") as file:
         contents = file.read()
 
     contents = common.resolve(contents, config)
 
-    with open(dst, "w") as file:
+    with open(dst, "w", newline="") as file:
         file.write(contents)
 
 
 def replace_in_file(filename, replacements, config):
     print(f"Updating {filename!r}")
-    with open(filename, "r") as file:
+    with open(filename, "r", newline="") as file:
         contents = file.read()
     for replacement in replacements:
         pattern = common.resolve(replacement["search"], config)
         replacement = common.resolve(replacement["replace"], config)
         contents = re.sub(pattern, replacement, contents)
-    with open(filename, "w") as file:
+    with open(filename, "w", newline="") as file:
         file.write(contents)
 
 
