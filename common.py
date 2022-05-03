@@ -1,13 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding:utf-8 -*-
 """
-Author:               Daumantas Kavolis <dkavolis>
-Date:                 05-Apr-2019
-Filename:             common.py
-Last Modified By:     Daumantas Kavolis
-Last Modified Time:   24-Nov-2019
-------------------
-Copyright (c) 2019 Daumantas Kavolis
+Copyright (c) 2022 Daumantas Kavolis
 
    buildtools is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -26,83 +20,123 @@ Copyright (c) 2019 Daumantas Kavolis
 
 
 from __future__ import annotations
+import argparse
 
 import contextlib
-import glob as _glob
 import json
 import os
 import re
 import xml.etree.ElementTree as ET
-from typing import Any, Dict, Mapping
+from typing import Any, Dict, Mapping, Optional, TypeVar
+import pathlib
+from buildtools.datatypes import PathLike, Config
 
 VAR_PATTERN = re.compile(r"\$\(([\w\_\-\d]+)\)")
 
+K = TypeVar("K")
+V = TypeVar("V")
 
-def load_config(filename: str) -> Dict[str, Any]:
+
+def recursive_update(left: Dict[K, V], right: Dict[K, V]) -> None:
+    for k, v in right.items():
+        lv = left.get(k, None)  # type: ignore
+        if isinstance(lv, dict):
+            recursive_update(lv, v)  # type: ignore
+        else:
+            left[k] = v
+
+
+def load_config(filename: PathLike) -> Config:
+    filename = pathlib.Path(filename).absolute()
     with open(filename) as file:
-        data = json.load(file)
-    file_dir = os.path.abspath(os.path.dirname(filename))
+        data: Dict[str, Any] = json.load(file)
+
+    user_file = filename.with_suffix(filename.suffix + ".user")
+    if user_file.exists():
+        with open(user_file) as file:
+            user_data = json.load(file)
+
+        recursive_update(data, user_data)
+
+    file_dir = filename.parent
     if "root" in data:
         root = data["root"]
         if not os.path.isabs(root):
-            root = os.path.abspath(os.path.join(file_dir, root))
+            root = file_dir / root
     else:
         root = file_dir
     data["root"] = root
 
     if "build_props" in data:
-        data["build_props"] = os.path.join(root, data["build_props"])
+        data["build_props"] = root / data["build_props"]
 
     data.setdefault("variables", {}).update(
         load_variables(root, data.get("build_props", None))
     )
 
     for name, value in data["variables"].items():
+        if not isinstance(value, str):
+            continue
+
         data["variables"][name] = replace_variables(value, data["variables"])
 
-    return data
+    return Config(**data)
 
 
-def find_solution_dir(root: str = None) -> str:
+def find_solution_dir(root: Optional[PathLike] = None) -> pathlib.Path:
     if root is None:
-        root = os.getcwd()
-    os.chdir(root)
+        root = pathlib.Path.cwd()
+    else:
+        root = pathlib.Path(root)
+
     counter = 0
-    try:
-        while not _glob.glob("*.sln"):
-            os.chdir(os.getcwd() + "/..")
-            if counter > 20:
-                raise FileNotFoundError("Could not find .sln file")
-            else:
-                counter += 1
-        return os.getcwd() + os.path.sep
-    finally:
-        os.chdir(root)
+    while not root.glob("*.sln"):
+        root = root.parent
+        if counter > 20:
+            raise FileNotFoundError("Could not find .sln file")
+        else:
+            counter += 1
+    return root
 
 
-def get_solution_vars(root: str = None) -> Dict[str, str]:
+def get_solution_vars(
+    root: Optional[PathLike] = None,
+) -> Dict[str, str]:
     sol_dir = find_solution_dir(root)
-    data = {"SolutionDir": sol_dir}
-    sol_files = _glob.glob(os.path.join(sol_dir, "*.sln"))
+    data: Dict[str, str] = {"SolutionDir": str(sol_dir)}
+    sol_files = list(sol_dir.glob("*.sln"))
     if sol_files:
-        sol_file = os.path.basename(sol_files[0])
-        data["SolutionFileName"] = sol_file
-        data["SolutionName"] = os.path.splitext(sol_file)[0]
+        sol_file = sol_files[0]
+        data["SolutionFileName"] = sol_file.name
+        data["SolutionName"] = sol_file.stem
     return data
 
 
-def load_build_props(filename: str) -> Dict[str, str]:
+def load_build_props(filename: PathLike) -> Dict[str, str]:
+    filename = pathlib.Path(filename)
     tree = ET.parse(filename)
     root = tree.getroot()
-    data = {}
-    for item in root[0]:
-        if item.text is None:
-            continue
-        data[item.tag] = item.text
+    data: Dict[str, str] = {}
+
+    for section in root:
+        if section.tag == "Import" and "Project" in section.attrib:
+            project = pathlib.Path(section.attrib["Project"])
+            if not project.is_absolute():
+                project = filename.parent / project
+            if project.exists():
+                data.update(load_build_props(project))
+        elif section.tag == "PropertyGroup":
+            for item in section:
+                if item.text is None:
+                    continue
+                data[item.tag] = item.text
+
     return data
 
 
-def load_variables(root: str = None, filename: str = None) -> Dict[str, str]:
+def load_variables(
+    root: Optional[PathLike] = None, filename: Optional[PathLike] = None
+) -> Dict[str, str]:
     data = get_solution_vars(root)
     if filename is not None:
         data.update(load_build_props(filename))
@@ -111,11 +145,8 @@ def load_variables(root: str = None, filename: str = None) -> Dict[str, str]:
     return data
 
 
-def replace_variables(string: str, var_map: Mapping[str, str]) -> str:
-    if not isinstance(string, str):
-        return string
-
-    def _re_sub(matchobj):
+def replace_variables(string: str, var_map: Mapping[str, Any]) -> str:
+    def _re_sub(matchobj: re.Match[str]):
         if matchobj.group(1) in var_map:
             return str(var_map[matchobj.group(1)])
         return ""
@@ -126,23 +157,16 @@ def replace_variables(string: str, var_map: Mapping[str, str]) -> str:
     return newstr
 
 
-def resolve(string: str, config: Dict[str, Any]) -> str:
-    return replace_variables(string, config["variables"])
+def resolve(string: str, config: Config) -> str:
+    return replace_variables(string, config.variables)
 
 
-def resolve_path(string: str, config: Dict[str, Any]) -> str:
-    path = os.path.normpath(resolve(string, config))
-    if isdir(string) or isdir(path):
-        return os.path.join(path, "")
-    return path
-
-
-def isdir(path: str) -> bool:
-    return os.path.isdir(path) or any(path.endswith(char) for char in "\\/")
+def resolve_path(string: PathLike, config: Config) -> pathlib.Path:
+    return pathlib.Path(resolve(str(string), config))
 
 
 @contextlib.contextmanager
-def chdir(dirname):
+def chdir(dirname: PathLike):
     old = os.getcwd()
     try:
         os.chdir(dirname)
@@ -151,11 +175,7 @@ def chdir(dirname):
         os.chdir(old)
 
 
-def glob(pattern):
-    return _glob.glob(pattern, recursive=True)
-
-
-def add_config_option(parser):
+def add_config_option(parser: argparse.ArgumentParser):
     parser.add_argument(
         "-f",
         "--file",

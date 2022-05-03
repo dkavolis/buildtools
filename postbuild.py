@@ -1,13 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding:utf-8 -*-
 """
-Author:               Daumantas Kavolis <dkavolis>
-Date:                 05-Apr-2019
-Filename:             postbuild.py
-Last Modified By:     Daumantas Kavolis
-Last Modified Time:   25-Apr-2019
-------------------
-Copyright (c) 2019 Daumantas Kavolis
+Copyright (c) 2022 Daumantas Kavolis
 
    buildtools is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -29,10 +23,13 @@ from __future__ import annotations
 
 import argparse
 import os
+import pathlib
 import shutil
 import subprocess
+from typing import Dict, Iterable
+
 from buildtools import common
-from typing import Dict
+from buildtools.datatypes import FileCopy, PathLike, Config
 
 
 def main():
@@ -44,48 +41,46 @@ def main():
 
     config = common.load_config(args.config)
 
-    with common.chdir(config["root"]):
+    with common.chdir(config.root):
         run(config, args)
 
 
-def run(config, args):
+def run(config: Config, args: argparse.Namespace):
     post_build(config, args.config_name, args.target_path)
 
 
-def update_config(config, configuration_name, target_path):
-    config["variables"]["ConfigurationName"] = configuration_name
-    config["variables"].update(
-        split_target_path(config["variables"]["SolutionDir"], target_path)
-    )
+def update_config(config: Config, configuration_name: str, target_path: PathLike):
+    config.variables["ConfigurationName"] = configuration_name
+    config.variables.update(split_target_path(target_path))
 
-    events = config["post_build"]
+    events = config.post_build
 
     override = f"[{configuration_name}]"
     if override in events:
         events.update(events[override])
-    override = f"[{config['variables']['TargetName']}]"
+    override = f"[{config.variables['TargetName']}]"
     if override in events:
         events.update(events[override])
 
 
-def post_build(config, configuration_name, target_path):
+def post_build(config: Config, configuration_name: str, target_path: PathLike) -> None:
     update_config(config, configuration_name, target_path)
-    events = config["post_build"]
+    events = config.post_build
 
-    if "pdb2mdb" in events:
+    if events.pdb2mdb is not None:
         pdb2mdb(
-            common.resolve_path(events["pdb2mdb"], config),
-            config["variables"]["TargetPath"],
+            common.resolve_path(events.pdb2mdb, config),
+            str(config.variables["TargetPath"]),
         )
 
-    if "clean" in events:
-        clean(events["clean"], config)
+    if events.clean:
+        clean(events.clean, config)
 
-    if "install" in events:
-        install(events["install"], config)
+    if events.install:
+        install(events.install, config)
 
 
-def build_parser(parser):
+def build_parser(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "-c",
         "--configuration",
@@ -98,50 +93,49 @@ def build_parser(parser):
     )
 
 
-def split_target_path(solution_dir: str, target: str) -> Dict[str, str]:
-    target_path = os.path.abspath(target)
-    target_filename = os.path.basename(target_path)
-    target_dir = os.path.dirname(target_path) + os.path.sep
-    target_name, target_ext = os.path.splitext(target_filename)
+def split_target_path(target: PathLike) -> Dict[str, str]:
+    target_path = pathlib.Path(target).absolute()
+    target_filename = target_path.name
+    target_dir = target_path.parent
+    target_name = target_path.stem
+    target_ext = target_path.suffix
     return dict(
-        TargetPath=target_path,
+        TargetPath=str(target_path),
         TargetFileName=target_filename,
-        TargetDir=target_dir,
+        TargetDir=str(target_dir),
         TargetName=target_name,
         TargetExt=target_ext,
     )
 
 
-def pdb2mdb(path, target):
+def pdb2mdb(path: PathLike, target: PathLike) -> None:
     print(f"Calling '{path} {target}'")
     subprocess.call([path, target])
 
 
-def clean(paths, config):
+def clean(paths: Iterable[PathLike], config: Config):
     for path in paths:
-        path = common.resolve_path(path, config)
-        if os.path.exists(path):
-            if os.path.isdir(path):
-                print(f"Removing directory {path!r}")
+        path = common.resolve_path(str(path), config)
+        if path.exists():
+            if path.is_dir():
+                print(f"Removing directory {path!s}")
                 shutil.rmtree(path)
             else:
-                print(f"Removing file {path!r}")
+                print(f"Removing file {path!s}")
                 os.remove(path)
 
 
-def install(mapping, config):
+def install(mapping: Iterable[FileCopy], config: Config):
     for item in mapping:
-        src = common.resolve_path(item["source"], config)
-        dst = common.resolve_path(item["destination"], config)
+        src = common.resolve(item.source, config)
+        dst = common.resolve_path(item.destination, config)
 
-        src = common.glob(src)
-
-        for path in src:
-            if os.path.isdir(path):
-                print(f"Copying tree {path!r} -> {dst!r}")
+        for path in config.glob(src):
+            if path.is_dir():
+                print(f"Copying tree {path!s} -> {dst!s}")
                 shutil.copytree(path, dst)
             else:
-                print(f"Copying file {path!r} -> {dst!r}")
+                print(f"Copying file {path!s} -> {dst!s}")
                 shutil.copy(path, dst)
 
 

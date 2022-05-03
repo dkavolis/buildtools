@@ -1,13 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding:utf-8 -*-
 """
-Author:               Daumantas Kavolis <dkavolis>
-Date:                 05-Apr-2019
-Filename:             __main__.py
-Last Modified By:     Daumantas Kavolis
-Last Modified Time:   13-Apr-2019
-------------------
-Copyright (c) 2019 Daumantas Kavolis
+Copyright (c) 2022 Daumantas Kavolis
 
    buildtools is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -26,7 +20,10 @@ Copyright (c) 2019 Daumantas Kavolis
 
 
 import argparse
+import json
+import pprint
 from buildtools import common, package, postbuild, replace, burst_compile
+from buildtools.datatypes import JSONEncoder
 
 
 def main():
@@ -73,7 +70,7 @@ def main():
 
     config = common.load_config(args.config)
 
-    with common.chdir(config["root"]):
+    with common.chdir(config.root):
         if hasattr(args, "run"):
             args.run(config, args)
         else:

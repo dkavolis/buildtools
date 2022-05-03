@@ -1,13 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding:utf-8 -*-
 """
-Author:               Daumantas Kavolis <dkavolis>
-Date:                 05-Apr-2019
-Filename:             __init__.py
-Last Modified By:     Daumantas Kavolis
-Last Modified Time:   13-Apr-2019
-------------------
-Copyright (c) 2019 Daumantas Kavolis
+Copyright (c) 2022 Daumantas Kavolis
 
    buildtools is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -24,5 +18,13 @@ Copyright (c) 2019 Daumantas Kavolis
 
 """
 
+# pyright: reportUnusedImport=false
 
-from buildtools import common, postbuild, replace, package, burst_compile
+from buildtools import (  # noqa: F401
+    common,
+    postbuild,
+    replace,
+    package,
+    burst_compile,
+    datatypes,
+)

@@ -1,13 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding:utf-8 -*-
 """
-Author:               Daumantas Kavolis <dkavolis>
-Date:                 05-Apr-2019
-Filename:             package.py
-Last Modified By:     Daumantas Kavolis
-Last Modified Time:   25-Apr-2019
-------------------
-Copyright (c) 2019 Daumantas Kavolis
+Copyright (c) 2022 Daumantas Kavolis
 
    buildtools is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -29,73 +23,90 @@ from __future__ import annotations
 
 import argparse
 import collections
-import glob
-import os
+import pathlib
+from typing import Any, Dict, Iterable, Optional, Set, Tuple
 import zipfile
 from buildtools import common
+from buildtools.datatypes import Config, Dependency, PathLike
 
 
-def run(config, args):
+def run(config: Config, args: Any):
     zipfiles = build_file_list(config)
     package(config, zipfiles)
 
 
 class ZipFiles(object):
-    def __init__(self, config):
-        self.files = collections.defaultdict(lambda: set())
+    def __init__(self, config: Config):
+        self.files: Dict[pathlib.Path, Set[pathlib.Path]] = collections.defaultdict(
+            lambda: set()
+        )
         self.config = config
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.files)
 
-    def __iter__(self):
+    def items(self) -> Iterable[Tuple[pathlib.Path, pathlib.Path]]:
         for src, files in self.files.items():
             for dst in files:
                 yield (src, dst)
 
-    def __getitem__(self, key):
-        return self.files[key]
+    def __getitem__(self, key: PathLike) -> Set[pathlib.Path]:
+        return self.files[pathlib.Path(key)]
 
-    def __setitem(self, key, value):
-        self.files[key] = value
+    def __setitem__(self, key: PathLike, value: Set[PathLike]) -> None:
+        self.files[pathlib.Path(key)] = {pathlib.Path(v) for v in value}
 
-    def _glob(self, pattern):
+    def _glob(self, pattern: PathLike) -> Iterable[pathlib.Path]:
         pattern = common.resolve_path(pattern, self.config)
-        return common.glob(pattern)
+        return self.config.glob(pattern)
 
-    def append(self, name, dst=None):
-        if common.isdir(name):
-            for _name in glob.glob(name + "**/*", recursive=True):
+    def append(
+        self,
+        name: PathLike,
+        dst: Optional[PathLike] = None,
+        is_dir: bool = False,
+    ) -> None:
+        name = pathlib.Path(name)
+        if name.is_dir():
+            for _name in name.glob("**/*"):
                 self.append(_name, dst)
         if dst is None:
-            dst = name
-        elif common.isdir(dst):
-            dst = os.path.join(dst, os.path.basename(name))
+            dst = name.relative_to(self.config.root)
+        else:
+            dst = pathlib.Path(dst)
+            if dst.is_dir() or is_dir:
+                dst = dst / name.name
         self.files[name].add(dst)
 
-    def remove(self, name):
-        if common.isdir(name):
-            for _name in glob.glob(name + "**/*", recursive=True):
+    def remove(self, name: PathLike) -> None:
+        name = pathlib.Path(name)
+        if name.is_dir():
+            for _name in name.glob("**/*"):
                 self.remove(_name)
         if name in self.files:
             del self.files[name]
 
-    def include(self, pattern, destination=None):
+    def include(
+        self,
+        pattern: PathLike,
+        destination: Optional[PathLike] = None,
+        is_dir: bool = False,
+    ) -> None:
         for file in self._glob(pattern):
-            self.append(file, destination)
+            self.append(file, destination, is_dir)
 
-    def exclude(self, pattern):
+    def exclude(self, pattern: PathLike) -> None:
         for file in self._glob(pattern):
             self.remove(file)
 
-    def map(self, src, dst):
+    def map(self, src: PathLike, dst: PathLike) -> None:
         dst = common.resolve_path(dst, self.config)
 
         for file in self._glob(src):
             self.append(file, dst)
 
 
-def build_parser(parser):
+def build_parser(parser: argparse.ArgumentParser):
     pass
 
 
@@ -108,61 +119,58 @@ def main():
 
     config = common.load_config(args.config)
 
-    with common.chdir(config["root"]):
+    with common.chdir(config.root):
         run(config, args)
 
 
-def package(config, file_list):
-    package = config["package"]
+def package(config: Config, file_list: ZipFiles) -> None:
+    package = config.package
 
-    compression = getattr(
-        zipfile, f"ZIP_{package.get('compression', 'DEFLATED').upper()}"
-    )
-    name = common.resolve(package["filename"], config)
-    outdir = common.resolve_path(package.get("output_dir", ""), config)
-    archive = os.path.join(outdir, name)
+    compression = package.compression_value
+    name = common.resolve(package.filename, config)
+    outdir = common.resolve_path(package.output_dir, config)
+    archive = outdir / name
 
-    print(f"Packaging {archive!r}")
+    print(f"Packaging {archive!s}")
 
     with zipfile.ZipFile(archive, "w", compression=compression) as zip:
-        for src, dst in file_list:
-            print(f"Writing {src!r} -> {dst!r}")
+        for src, dst in file_list.items():
+            print(f"Writing {src!s} -> {dst!s}")
             zip.write(src, dst)
 
 
-def build_file_list(config):
-    package = config["package"]
+def build_file_list(config: Config) -> ZipFiles:
+    package = config.package
 
     zipfiles = ZipFiles(config)
 
-    for pattern in package.get("include", []):
+    for pattern in package.include:
         zipfiles.include(pattern)
 
-    for pattern in package.get("exclude", []):
+    for pattern in package.exclude:
         zipfiles.exclude(pattern)
 
-    for file_map in package.get("map", []):
-        zipfiles.map(file_map["source"], file_map["destination"])
+    for file_map in package.map:
+        zipfiles.map(file_map.source, file_map.destination)
 
-    def process_dependency(name, data):
-        src = common.resolve_path(name, config)
-        dst = common.resolve_path(data["destination"], config)
+    def process_dependency(dep: Dependency):
+        src = common.resolve_path(dep.path, config)
+        dst = common.resolve_path(dep.destination, config)
 
-        for pattern in data.get("include", []):
-            zipfiles.include(os.path.join(src, pattern), dst)
+        for pattern in dep.include:
+            zipfiles.include(src / pattern, dst, True)
 
-        for pattern in data.get("exclude", []):
-            zipfiles.exclude(os.path.join(src, pattern))
+        for pattern in dep.exclude:
+            zipfiles.exclude(src / pattern)
 
-        for file_map in data.get("map", []):
-            _src = common.resolve_path(file_map["source"], config)
-            if not os.path.isabs(_src):
-                _src = os.path.join(src, _src)
-            zipfiles.map(_src, file_map["destination"])
+        for file_map in dep.map:
+            _src = common.resolve_path(file_map.source, config)
+            if not _src.is_absolute():
+                _src = src / _src
+            zipfiles.map(_src, file_map.destination)
 
-    for dependency in package.get("dependencies", []):
-        key = dependency["path"]
-        process_dependency(key, dependency)
+    for dependency in package.dependencies:
+        process_dependency(dependency)
 
     return zipfiles
 

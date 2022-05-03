@@ -1,30 +1,27 @@
 #!/usr/bin/env python3
 # -*- coding:utf-8 -*-
-"""
-@Author:               Daumantas Kavolis <dkavolis>
-@Date:                 20-Jun-2020
-@Filename:             burst_compile.py
-@Last Modified By:     Daumantas Kavolis
-@Last Modified Time:   20-Jun-2020
-"""
+
+from __future__ import annotations
 
 import argparse
 import copy
 import logging
 import os
+import pathlib
 import subprocess
 import sys
+from typing import Dict, List, Optional
 from buildtools import common
-import glob
+from buildtools.datatypes import BurstCompileAction, BurstTarget, PathLike, Config
 
 logger = logging.getLogger(__name__)
 
 
-def run(config, args):
+def run(config: Config, args: argparse.Namespace):
     burst_compile_all(config, args.print_help)
 
 
-def build_parser(parser):
+def build_parser(parser: argparse.ArgumentParser):
     parser.add_argument(
         "--print-help",
         help="Print burst compiler help and exit",
@@ -34,23 +31,24 @@ def build_parser(parser):
     )
 
 
-def get_targets(config):
-    targets = {}
-    for t in config.get("targets", []):
+def get_targets(config: BurstCompileAction):
+    targets: Dict[str, BurstTarget] = {}
+    for t in config.targets:
         target = copy.deepcopy(t)
-        platform = target.get("platform", None)
+        platform = target.platform
         if platform is None:
             raise ValueError("Target does not contain platform")
         targets[platform] = target
 
     # sort out includes
-    final = {}
+    final: Dict[str, BurstTarget] = {}
     for platform, target in targets.items():
-        include = target.pop("include", None)
+        include = target.include
         if include is None:
             final[platform] = target
             continue
 
+        target.include = None
         parent = targets.get(include, None)
 
         if parent is None:
@@ -67,8 +65,14 @@ def get_targets(config):
     return final
 
 
-def add_option(args, target, name, config, if_false=None):
-    option = target.get(name, None)
+def add_option(
+    args: List[str],
+    target: BurstTarget,
+    name: str,
+    config: Config,
+    if_false: Optional[str] = None,
+) -> None:
+    option = getattr(target, name, None)
     if option is None:
         return
 
@@ -80,8 +84,14 @@ def add_option(args, target, name, config, if_false=None):
         args.append(if_false)
 
 
-def add_value_option(args, target, name, config, is_path=False):
-    option = target.get(name, None)
+def add_value_option(
+    args: List[str],
+    target: BurstTarget,
+    name: str,
+    config: Config,
+    is_path: bool = False,
+) -> None:
+    option = getattr(target, name, None)
     if option is None:
         return
 
@@ -93,18 +103,27 @@ def add_value_option(args, target, name, config, is_path=False):
     args.append(f"--{name.replace('_', '-')}={option}")
 
 
-def add_path_list_option(args, target, name, option_name, config):
-    for path in target.get(name, []):
+def add_path_list_option(
+    args: List[str], target: BurstTarget, name: str, option_name: str, config: Config
+) -> None:
+    paths: Optional[List[pathlib.Path]] = getattr(target, name, None)
+    if paths is None:
+        return
+
+    path: pathlib.Path
+    for path in paths:
         path = common.resolve_path(path, config)
-        if "*" in path:
-            for p in glob.glob(path, recursive=True):
+        if "*" in str(path):
+            for p in config.glob(path):
                 args.append(f"--{option_name}={p}")
         else:
             args.append(f"--{option_name}={path}")
 
 
-def burst_compile(bcl, target, config, debug=False):
-    args = [bcl]
+def burst_compile(
+    bcl: PathLike, target: BurstTarget, config: Config, debug: bool = False
+) -> None:
+    args: List[str] = [str(bcl)]
 
     add_value_option(args, target, "platform", config)
     add_option(args, target, "safety_checks", config, "--disable-safety-checks")
@@ -120,8 +139,9 @@ def burst_compile(bcl, target, config, debug=False):
     add_value_option(args, target, "key_folder", config, is_path=True)
     add_value_option(args, target, "include_root_assembly_references", config)
 
-    for t in target.get("targets", []):
-        args.append(f"--target={common.resolve(t, config)}")
+    if target.targets:
+        for t in target.targets:
+            args.append(f"--target={common.resolve(t, config)}")
 
     add_path_list_option(args, target, "root_assemblies", "root-assembly", config)
     add_path_list_option(args, target, "assembly_folders", "assembly-folder", config)
@@ -132,7 +152,7 @@ def burst_compile(bcl, target, config, debug=False):
         env = os.environ.copy()
         env["UNITY_BURST_DEBUG"] = ""
     else:
-        env = os.environ
+        env = os.environ  # type: ignore
 
     try:
         subprocess.check_call(args, env=env)
@@ -141,19 +161,16 @@ def burst_compile(bcl, target, config, debug=False):
         raise
 
 
-def burst_compile_all(config, print_help=False):
-    compile_config = config["burst_compile"]
-    bcl = compile_config.get("bcl", None)
-    if bcl is None:
-        raise ValueError("config must contain 'bcl' entry")
-
+def burst_compile_all(config: Config, print_help: bool = False) -> None:
+    compile_config = config.burst_compile
+    bcl = compile_config.bcl
     bcl = common.resolve_path(bcl, config)
 
     if print_help:
         subprocess.call([bcl, "--help"])
         sys.exit(0)
 
-    debug = compile_config.get("debug", False)
+    debug = compile_config.debug
 
     targets = get_targets(compile_config)
     for platform, target in targets.items():
@@ -172,7 +189,7 @@ def main():
 
     config = common.load_config(args.config)
 
-    with common.chdir(config["root"]):
+    with common.chdir(config.root):
         run(config, args)
 
 
