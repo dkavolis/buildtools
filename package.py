@@ -136,6 +136,7 @@ def package(config: Config, file_list: ZipFiles, verbose: bool) -> None:
     if verbose:
         print(f"Packaging {archive!s}")
 
+    archive.parent.mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(archive, "w", compression=compression) as zip:
         for src, dst in file_list.items():
             if verbose:
