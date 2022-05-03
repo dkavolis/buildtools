@@ -24,15 +24,15 @@ from __future__ import annotations
 import argparse
 import collections
 import pathlib
-from typing import Any, Dict, Iterable, Optional, Set, Tuple
+from typing import Dict, Iterable, Optional, Set, Tuple
 import zipfile
 from buildtools import common
 from buildtools.datatypes import Config, Dependency, PathLike
 
 
-def run(config: Config, args: Any):
+def run(config: Config, args: argparse.Namespace):
     zipfiles = build_file_list(config)
-    package(config, zipfiles)
+    package(config, zipfiles, args.verbose > 0)
 
 
 class ZipFiles(object):
@@ -107,7 +107,9 @@ class ZipFiles(object):
 
 
 def build_parser(parser: argparse.ArgumentParser):
-    pass
+    parser.add_argument(
+        "-v", "--verbose", action="count", help="Increase output verbosity", default=0
+    )
 
 
 def main():
@@ -123,7 +125,7 @@ def main():
         run(config, args)
 
 
-def package(config: Config, file_list: ZipFiles) -> None:
+def package(config: Config, file_list: ZipFiles, verbose: bool) -> None:
     package = config.package
 
     compression = package.compression_value
@@ -131,12 +133,16 @@ def package(config: Config, file_list: ZipFiles) -> None:
     outdir = common.resolve_path(package.output_dir, config)
     archive = outdir / name
 
-    print(f"Packaging {archive!s}")
+    if verbose:
+        print(f"Packaging {archive!s}")
 
     with zipfile.ZipFile(archive, "w", compression=compression) as zip:
         for src, dst in file_list.items():
-            print(f"Writing {src!s} -> {dst!s}")
+            if verbose:
+                print(f"Writing {src!s} -> {dst!s}")
             zip.write(src, dst)
+
+    print(archive)
 
 
 def build_file_list(config: Config) -> ZipFiles:
