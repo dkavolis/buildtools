@@ -24,6 +24,7 @@ from __future__ import annotations
 import argparse
 import collections
 import pathlib
+import shutil
 from typing import Dict, Iterable, Optional, Set, Tuple
 import zipfile
 from buildtools import common
@@ -137,11 +138,24 @@ def package(config: Config, file_list: ZipFiles, verbose: bool) -> None:
         print(f"Packaging {archive!s}")
 
     archive.parent.mkdir(parents=True, exist_ok=True)
-    with zipfile.ZipFile(archive, "w", compression=compression) as zip:
-        for src, dst in file_list.items():
+
+    if compression is None:
+        archive = archive.with_suffix("")
+        archive.mkdir(exist_ok=True)
+        for src, _dst in file_list.items():
+            dst = archive / _dst
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            if dst.is_dir():
+                continue
             if verbose:
                 print(f"Writing {src!s} -> {dst!s}")
-            zip.write(src, dst)
+            shutil.copyfile(src, dst)
+    else:
+        with zipfile.ZipFile(archive, "w", compression=compression) as zip:
+            for src, dst in file_list.items():
+                if verbose:
+                    print(f"Writing {src!s} -> {dst!s}")
+                zip.write(src, dst)
 
     print(archive)
 

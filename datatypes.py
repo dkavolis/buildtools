@@ -235,10 +235,12 @@ class PackageAction:
     exclude: List[str] = field(default_factory=list)
     map: List[FileCopy] = listfield(FileCopy)
     dependencies: List[Dependency] = listfield(Dependency)
-    compression: str = "DEFLATED"
+    compression: Optional[str] = "DEFLATED"
 
     @property
-    def compression_value(self) -> int:
+    def compression_value(self) -> Optional[int]:
+        if self.compression is None:
+            return None
         return getattr(zipfile, f"ZIP_{self.compression.upper()}")
 
 
