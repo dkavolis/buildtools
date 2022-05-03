@@ -65,10 +65,19 @@ def main():
         help="Display this help and exit",
         default=argparse.SUPPRESS,
     )
+    parser.add_argument("--dump-config", action="store", default=0, nargs="?")
 
     args = parser.parse_args()
 
     config = common.load_config(args.config)
+
+    if args.dump_config != 0:
+        if args.dump_config:
+            with open(args.dump_config, "w") as file:
+                json.dump(config, file, cls=JSONEncoder, indent=4)
+        else:
+            pprint.pprint(config)
+        return
 
     with common.chdir(config.root):
         if hasattr(args, "run"):
