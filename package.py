@@ -64,19 +64,26 @@ class ZipFiles(object):
     def append(
         self,
         name: PathLike,
+        src: Optional[PathLike] = None,
         dst: Optional[PathLike] = None,
         is_dir: bool = False,
     ) -> None:
         name = pathlib.Path(name)
         if name.is_dir():
             for _name in name.glob("**/*"):
-                self.append(_name, dst)
+                # force dst to a dir since likely writing multiple files there
+                self.append(_name, src, dst, is_dir=True)
         if dst is None:
             dst = name.relative_to(self.config.root)
         else:
             dst = pathlib.Path(dst)
+            rel_path: PathLike
+            if src is None:
+                rel_path = name.name
+            else:
+                rel_path = name.relative_to(src)
             if dst.is_dir() or is_dir:
-                dst = dst / name.name
+                dst = dst / rel_path
         self.files[name].add(dst)
 
     def remove(self, name: PathLike) -> None:
@@ -91,10 +98,11 @@ class ZipFiles(object):
         self,
         pattern: PathLike,
         destination: Optional[PathLike] = None,
+        src: Optional[PathLike] = None,
         is_dir: bool = False,
     ) -> None:
         for file in self._glob(pattern):
-            self.append(file, destination, is_dir)
+            self.append(file, src=src, dst=destination, is_dir=is_dir)
 
     def exclude(self, pattern: PathLike) -> None:
         for file in self._glob(pattern):
@@ -104,7 +112,7 @@ class ZipFiles(object):
         dst = common.resolve_path(dst, self.config)
 
         for file in self._glob(src):
-            self.append(file, dst)
+            self.append(file, dst=dst)
 
 
 def build_parser(parser: argparse.ArgumentParser):
@@ -145,7 +153,7 @@ def package(config: Config, file_list: ZipFiles, verbose: bool) -> None:
         for src, _dst in file_list.items():
             dst = archive / _dst
             dst.parent.mkdir(parents=True, exist_ok=True)
-            if dst.is_dir():
+            if src.is_dir() or dst.is_dir():
                 continue
             if verbose:
                 print(f"Writing {src!s} -> {dst!s}")
@@ -179,7 +187,7 @@ def build_file_list(config: Config) -> ZipFiles:
         dst = common.resolve_path(dep.destination, config)
 
         for pattern in dep.include:
-            zipfiles.include(src / pattern, dst, True)
+            zipfiles.include(src / pattern, src=src, destination=dst, is_dir=True)
 
         for pattern in dep.exclude:
             zipfiles.exclude(src / pattern)
