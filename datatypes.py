@@ -127,7 +127,7 @@ def listfield(type: Type[T], optional: bool = False) -> List[T]:
     if optional:
         kwargs["default"] = None
     else:
-        kwargs["default_factory"] = lambda: list  # type: ignore
+        kwargs["default_factory"] = list
 
     return field(
         **kwargs,
