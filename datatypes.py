@@ -16,6 +16,7 @@ from typing import (
     Dict,
     Generator,
     List,
+    MutableSequence,
     Optional,
     Type,
     TypeVar,
@@ -74,6 +75,23 @@ def parse_dict(
     return {k: type(**v) if isinstance(v, dict) else v for k, v in items.items()}
 
 
+def from_dict(type: Type[T], items: dict[str, Any]) -> T:
+    safe_items = {k: v for k, v in items.items() if not k.startswith("+")}
+    append_items = {k: v for k, v in items.items() if k.startswith("+")}
+
+    for k, v in append_items.items():
+        attr = k[1:]
+        if attr not in safe_items:
+            raise TypeError(f"Invalid key: +{attr}")
+
+        current = safe_items[attr]
+        if not isinstance(current, MutableSequence):
+            raise TypeError(f"Invalid key +{attr} for appending new items")
+        current.extend(v)  # type: ignore
+
+    return type(**safe_items)
+
+
 def post_init(self: Any) -> None:
     for f in fields(self):
         value = getattr(self, f.name)
@@ -89,7 +107,7 @@ def post_init(self: Any) -> None:
 
         if getattr(type, JsonClassTag, False):
             if isinstance(value, dict):
-                setattr(self, f.name, type(**value))
+                setattr(self, f.name, from_dict(type, value))  # type: ignore
             continue
 
         if type is pathlib.Path:
