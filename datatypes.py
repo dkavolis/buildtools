@@ -75,7 +75,7 @@ def parse_dict(
     return {k: type(**v) if isinstance(v, dict) else v for k, v in items.items()}
 
 
-def from_dict(type: Type[T], items: dict[str, Any]) -> T:
+def process_json_dict(items: dict[str, Any]) -> dict[str, Any]:
     safe_items = {k: v for k, v in items.items() if not k.startswith("+")}
     append_items = {k: v for k, v in items.items() if k.startswith("+")}
 
@@ -89,12 +89,15 @@ def from_dict(type: Type[T], items: dict[str, Any]) -> T:
             raise TypeError(f"Invalid key +{attr} for appending new items")
         current.extend(v)  # type: ignore
 
-    return type(**safe_items)
+    return safe_items
 
 
 def post_init(self: Any) -> None:
     for f in fields(self):
         value = getattr(self, f.name)
+        if isinstance(value, dict):
+            value = process_json_dict(cast(dict[str, Any], value))
+            setattr(self, f.name, value)
 
         init = f.metadata.get("__post_init__", None)
         if init is not None:
@@ -107,7 +110,7 @@ def post_init(self: Any) -> None:
 
         if getattr(type, JsonClassTag, False):
             if isinstance(value, dict):
-                setattr(self, f.name, from_dict(type, value))  # type: ignore
+                setattr(self, f.name, type(**value))
             continue
 
         if type is pathlib.Path:
