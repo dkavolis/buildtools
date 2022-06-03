@@ -22,6 +22,7 @@ Copyright (c) 2022 Daumantas Kavolis
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import pathlib
 import shutil
@@ -29,7 +30,7 @@ import subprocess
 from typing import Dict, Iterable
 
 from buildtools import common
-from buildtools.datatypes import FileCopy, PathLike, Config
+from buildtools.datatypes import FileCopy, JSONEncoder, PathLike, Config
 
 
 def main():
@@ -46,7 +47,7 @@ def main():
 
 
 def run(config: Config, args: argparse.Namespace):
-    post_build(config, args.config_name, args.target_path)
+    post_build(config, args.config_name, args.target_path, args.dump_events)
 
 
 def update_config(config: Config, configuration_name: str, target_path: PathLike):
@@ -55,17 +56,65 @@ def update_config(config: Config, configuration_name: str, target_path: PathLike
 
     events = config.post_build
 
-    override = f"[{configuration_name}]"
-    if override in events:
-        events.update(events[override])
-    override = f"[{config.variables['TargetName']}]"
-    if override in events:
-        events.update(events[override])
+    target_key = f"[{config.variables['TargetName']}]"
+
+    for key, value in events.per_target.items():
+        if key[0] == "|" and key[1:] == configuration_name:
+            events.update(value)
+            continue
+
+        if key.startswith("|!") and key[2:] != configuration_name:
+            events.update(value)
+            continue
+
+        if not key.startswith(target_key):
+            continue
+
+        # exact match
+        if key == target_key:
+            events.update(value)
+            continue
+
+        suffix = key[len(target_key) :]
+
+        if suffix[0] != "|":
+            raise ValueError(
+                f"Invalid target modifier - must start with '|' but got {suffix}"
+            )
+
+        modifier = suffix[1:]
+
+        # exact configuration match
+        if modifier == configuration_name:
+            events.update(value)
+            continue
+
+        # negative match
+        if modifier[0] == "!" and modifier[1:] != configuration_name:
+            events.update(value)
 
 
-def post_build(config: Config, configuration_name: str, target_path: PathLike) -> None:
+def post_build(
+    config: Config,
+    configuration_name: str,
+    target_path: PathLike,
+    dump_events: bool = False,
+) -> None:
     update_config(config, configuration_name, target_path)
     events = config.post_build
+
+    if dump_events:
+        print(
+            json.dumps(
+                {
+                    "pdb2mdb": events.pdb2mdb,
+                    "clean": events.clean,
+                    "install": events.install,
+                },
+                indent=4,
+                cls=JSONEncoder,
+            )
+        )
 
     if events.pdb2mdb is not None:
         pdb2mdb(
@@ -90,6 +139,14 @@ def build_parser(parser: argparse.ArgumentParser) -> None:
     )
     parser.add_argument(
         "-t", "--target", required=True, help="Target path", dest="target_path"
+    )
+    parser.add_argument(
+        "--dump-events",
+        required=False,
+        help="Dump aggregated post build events",
+        dest="dump_events",
+        action="store_true",
+        default=False,
     )
 
 
