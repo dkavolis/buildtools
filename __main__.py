@@ -24,9 +24,12 @@ import json
 import pprint
 from buildtools import common, package, postbuild, replace, burst_compile
 from buildtools.datatypes import JSONEncoder
+import logging
 
 
 def main():
+    logging.basicConfig()
+
     parser = argparse.ArgumentParser("C# build helpers", add_help=False)
 
     common.add_config_option(parser)

@@ -23,6 +23,7 @@ from __future__ import annotations
 import argparse
 
 import contextlib
+import logging
 import json
 import os
 import re
@@ -31,10 +32,12 @@ from typing import Any, Dict, Mapping, Optional, TypeVar
 import pathlib
 from buildtools.datatypes import PathLike, Config
 
-VAR_PATTERN = re.compile(r"\$\(([\w\_\-\d]+)\)")
+VAR_PATTERN = re.compile(r"\$\(([\w\_\-\:\d]+)\)")
 
 K = TypeVar("K")
 V = TypeVar("V")
+
+logger = logging.getLogger(__name__)
 
 
 def recursive_update(left: Dict[K, V], right: Dict[K, V]) -> None:
@@ -147,9 +150,18 @@ def load_variables(
 
 def replace_variables(string: str, var_map: Mapping[str, Any]) -> str:
     def _re_sub(matchobj: re.Match[str]):
-        if matchobj.group(1) in var_map:
-            return str(var_map[matchobj.group(1)])
-        return ""
+        identifier = matchobj.group(1)
+        value: Any = None
+        if identifier.startswith("env:"):
+            value = os.environ.get(identifier[4:], None)
+        else:
+            value = var_map.get(identifier, None)
+
+        if value is None:
+            logger.warn("Variable %s not found!", identifier)
+            return ""
+
+        return str(value)
 
     newstr, subs = re.subn(VAR_PATTERN, _re_sub, string)
     while subs > 0:
