@@ -33,6 +33,9 @@ import pathlib
 from buildtools.datatypes import PathLike, Config
 
 VAR_PATTERN = re.compile(r"\$\(([\w\_\-\:\d]+)\)")
+SILENT_VARS = {
+    "Configuration",
+}
 
 K = TypeVar("K")
 V = TypeVar("V")
@@ -158,7 +161,8 @@ def replace_variables(string: str, var_map: Mapping[str, Any]) -> str:
             value = var_map.get(identifier, None)
 
         if value is None:
-            logger.warn("Variable %s not found!", identifier)
+            if identifier not in SILENT_VARS:
+                logger.warn("Variable %s not found!", identifier)
             return ""
 
         return str(value)
